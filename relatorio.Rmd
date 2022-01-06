@@ -136,29 +136,35 @@ alavanca <- function(fit,fit2,lab1,lab2){
 }
 ```
 
-# Modelando o banco de dados com a Gama
+# Modelando o banco de dados
+Modelares o banco de dados de um experimento para avaliar o desempenho de cinco tipos de turbinas de alta velocidade, levando em consideração 10 motores dos 5 tipos avaliados, analisando o tempo (em unidades de milhões de ciclos) até a perda da velocidade.
 
-## Primeiro Ajuste
+## Utilizando a Distribuição Gamma
+Começaremos com a Distribuição Gamma, que é utilizada para modelar valores de dados positivos que são assimétricos à direita e maiores que 0.
+
+### Primeiro Ajuste
+Então começaremos a análise da Distribuição Gamma, considerando todos os tipos variáveis dummies e analisaremos sua significância:
 ```{r}
 glm(tempo ~ tipo, family = Gamma(link = "log"), data = turbina) %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Primeiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Primeiro Ajuste - Gamma")
 ```
 Notamos, que os tipos não são completamente significativos, assim realizaremos junções buscando que as variáveis dummies sejam significativas.
 
-## Segundo Ajuste
-
+### Segundo Ajuste
+Iremos aglutinar os grupos 3 e 4 em um só, visto que foram os grupos que obtiveram maior p-valor na tabela anterior, assim temos:
 ```{r}
 turbina %>% 
   mutate(tipo = case_when(as.numeric(tipo) == 3 ~ 4, TRUE ~ as.numeric(tipo))) %>%
   mutate(tipo = factor(tipo)) %>%
   glm(tempo ~ tipo, family = Gamma(link = "log"), data = .) %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Segundo Ajuste - Gama")
+    mypdf1::pdf1_tbl("Segundo Ajuste - Gamma")
 ```
-Juntamos o tipo 3 e 4, mas ainda não obtivemos significância em todos os tipos.
+Percebe-se que ainda não obtivemos significância em todos os tipos.
 
-## Terceiro Ajuste
+### Terceiro Ajuste
+Agora iremos juntar os tipos 3 e 4 com o tipo 1, logo obtêm-se:
 ```{r}
 turbina %>% 
   mutate(tipo = case_when(as.numeric(tipo) == 3 ~ 4, as.numeric(tipo) == 4 ~ 1, TRUE ~ as.numeric(tipo))) %>% 
@@ -167,37 +173,46 @@ turbina %>%
   glm(tempo ~ tipo, family = Gamma(link = "log"), data = .) -> fit1 
 fit1 %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Terceiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Terceiro Ajuste - Gamma")
 ```
-No entanto, aglutinando os tipos 1,3 e 4, temos que todas as variáveis dummies são significativas.
+Desse modo conseguimos significância em todas as variáveis e ficamos com 3 grupos, sendo 1 aglomerados, os grupos são: Tipo 1, 3 e 4, Tipo 2 e Tipo 5.
 
 
-## Modelando com o banco de dados com a normal inversa
+## Utilizando a Distribuição Normal Inversa
+Agora utilizaremos a Distribuição Normal Inversa (NI), que também é utilizada para modelar valores de dados positivos e maiores que 0.
 
+### Primeiro ajuste
+Considerando todos os tipos variáveis dummies, a significância fica:
 ```{r}
 glm(tempo ~ tipo, inverse.gaussian(link = "1/mu^2"), data = turbina) %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Primeiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Primeiro Ajuste - NI - Canônica")
 glm(tempo ~ tipo, inverse.gaussian(link = "log"), data = turbina) %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Primeiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Primeiro Ajuste - NI - log")
 ```
+Notamos, que os tipos não são completamente significativos, assim realizaremos agregações em ambos modelos, buscando que as variáveis dummies sejam significativas.
 
+### Segundo Ajuste
+Iremos unir os grupos 3 e 4 em um só, visto que foram os grupos que obtiveram maior p-valor na tabela anterior, assim temos:
 ```{r}
 turbina %>% 
   mutate(tipo = case_when(as.numeric(tipo) == 3 ~ 4, TRUE ~ as.numeric(tipo))) %>%
   mutate(tipo = factor(tipo)) %>%
   glm(tempo ~ tipo, inverse.gaussian(link = "1/mu^2"), data = .) %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Primeiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Segundo Ajuste - NI - Canônica")
 turbina %>% 
   mutate(tipo = case_when(as.numeric(tipo) == 3 ~ 4, TRUE ~ as.numeric(tipo))) %>%
   mutate(tipo = factor(tipo)) %>%
   glm(tempo ~ tipo, inverse.gaussian(link = "log"), data = .) %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Primeiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Segundo Ajuste - NI - log")
 ```
+Nota-se que ainda não obtivemos significância em todos os tipos, em nenhuma das distribuições NI.
 
+### Terceiro Ajuste
+Agora iremos juntar os tipos 3 e 4 com o tipo 1, logo obtêm-se:
 ```{r}
 turbina %>% 
   mutate(tipo = case_when(as.numeric(tipo) == 3 ~ 4, TRUE ~ as.numeric(tipo))) %>%
@@ -206,7 +221,7 @@ turbina %>%
   glm(tempo ~ tipo, inverse.gaussian(link = "1/mu^2"), data = .) -> fit2
 fit2 %>%  
 fit2df() %>%
-    mypdf1::pdf1_tbl("Primeiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Terceiro Ajuste - NI - Canônica")
 turbina %>% 
   mutate(tipo = case_when(as.numeric(tipo) == 3 ~ 4, TRUE ~ as.numeric(tipo))) %>%
   mutate(tipo = case_when(as.numeric(tipo) == 4 ~ 1, TRUE ~ as.numeric(tipo))) %>%
@@ -214,38 +229,65 @@ turbina %>%
   glm(tempo ~ tipo, inverse.gaussian(link = "log"), data = .) -> fit3
   fit3 %>%
   fit2df() %>%
-    mypdf1::pdf1_tbl("Primeiro Ajuste - Gama")
+    mypdf1::pdf1_tbl("Terceiro Ajuste - NI - log")
 ```
+Desse modo conseguimos significância em todas as variáveis e ficamos com 3 grupos, sendo 1 aglomerados, os grupos são: Tipo 1, 3 e 4, Tipo 2 e Tipo 5, tanto na Normal Inversa com ligação canônica, quanto na com ligação $\log$.
 
 # Análise de Influência
+Nesta seção será realizada uma busca de observações atípicas no banco de dados, que assim possam estar influenciado a análise, também influenciado pelas junções de tipos realizados anteriomente, assim utilizaremos 5 análises para a verificação de pontos de influência: Análise de Resíduos Deviance, Envelope Simulado, Distância de Cook, Alavancagem e DFFits.
 
-## Ajuste com a Gama
+## Ajuste com a Gamma
+Começaremos a análise de influência com a distribuição Gamma.
 
 ### Resíduos deviances vs indices
 
 ```{r}
-residuo1 <- rstudent(fit1)
+residuo1 <- residuals(fit1,type="deviance")
 resid1(residuo1, "Resíduos do Modelo Gamma")
 ```
 
+Não observa-se algum resíduo fora dos limites especificados, indicando que não exista pontos de influência.
+
 ### Envelope Simulado
 
-```{r}
-hnp::hnp(fit1, resid.type="deviance", halfnormal = F)
+```{r, results = F, fig.show='hide'}
+g1 <- hnp::hnp(fit1, resid.type="deviance", halfnormal = F)
+G1 <- with(g1, data.frame(x, lower, upper, median, residuals))
+
 ```
+
+```{r}
+G1 %>%
+ggplot(aes(x)) +
+  geom_point(aes(y = residuals)) +
+  geom_line(aes(y = lower)) +
+  geom_line(aes(y = upper)) +
+  geom_line(aes(y = median), linetype = "dashed")
+```
+Todos os pontos estão dentro das bandas simuladas, indicando que a distribuição é adequada.
 
 ### Distância de Cook
 
 ```{r}
 cook1(fit1, "Distância do Modelo Gamma") +
-    ggrepel::geom_text_repel(aes(label=turbina$n, ),size=2.8,point.padding = 0.3)
-
+    ggrepel::geom_text_repel(aes(label=turbina$n),size=2.8,point.padding = 0.3)
 ```
+Nota-se que as observações 47 e 49 ficam fora dos limites estipulados, mas sem achatar o gráfico da distância de cook, indicam que são potenciais pontos de influência, assim iremos tomar a decisão sobre a sua remoção posteriomente.
 
 ### Alavancagem
+
 ```{r}
 alavanca1(fit1)
 ```
+Observamos basicamente duas retas para a medida de alavancagem, mas nenhum delas fora dos limites estipulados, então não indicando pontos de influência.
+
+### DFFits
+
+```{r}
+dffts1(fit1, "DFFits do Modelo Gamma")+
+    ggrepel::geom_text_repel(aes(label=turbina$n),size=2.8,point.padding = 0.3)
+```
+Observamos que os pontos 5, 47 e 49 ficam fora dos limites estipulados, assim são candidatos a pontos de influência.
 
 ### Conclusão
 
@@ -258,10 +300,10 @@ residuo2 <- residuals(fit2,type="deviance")
 residuo3 <- residuals(fit3,type="deviance")
 resid(residuo2, residuo3, "Resíduos do Modelo Normal Inversa Canônico", "Resíduos do Modelo Normal Inversa log" )
 ```
+
 ### Envelope Simulado
 
 ```{r, results = F, fig.show='hide'}
-par(mfrow = c(1, 2))
 g1 <- hnp::hnp(fit2, resid.type="deviance", halfnormal = F)
 hnp::hnp(fit3, resid.type="deviance", halfnormal = F)
 G1 <- with(g1, data.frame(x, lower, upper, median, residuals))
